@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 
 namespace YoutubeExtractor
 {
@@ -21,6 +22,11 @@ namespace YoutubeExtractor
         /// <exception cref="VideoNotAvailableException">The video is not available.</exception>
         /// <exception cref="WebException">An error occurred while downloading the YouTube page html.</exception>
         /// <exception cref="YoutubeParseException">The Youtube page could not be parsed.</exception>
+		/// 
+		public static Task<IEnumerable<VideoInfo>> GetDownloadUrlsAsync(string videoUrl)
+		{
+			return Task.Factory.StartNew (() => GetDownloadUrls (videoUrl));
+		}
         public static IEnumerable<VideoInfo> GetDownloadUrls(string videoUrl)
         {
             if (videoUrl == null)
