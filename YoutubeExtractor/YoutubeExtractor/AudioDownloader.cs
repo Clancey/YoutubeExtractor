@@ -27,6 +27,8 @@ namespace YoutubeExtractor
         /// </summary>
         public event EventHandler<ProgressEventArgs> AudioExtractionProgressChanged;
 
+		public event EventHandler AudioExtractionComplete;
+
         /// <summary>
         /// Occurs when the download progress of the video file has changed.
         /// </summary>
@@ -55,6 +57,7 @@ namespace YoutubeExtractor
 
             this.OnDownloadFinished(EventArgs.Empty);
         }
+
 
         private void DownloadVideo(string path)
         {
@@ -87,6 +90,8 @@ namespace YoutubeExtractor
 
                 flvFile.ExtractStreams();
             }
+			if (AudioExtractionComplete != null)
+				AudioExtractionComplete (this, EventArgs.Empty);
         }
     }
 }
