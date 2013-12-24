@@ -1,7 +1,9 @@
 ﻿using System.Collections.Generic;
+using System;
 
 namespace YoutubeExtractor
 {
+	[Serializable]
     public class VideoInfo
     {
         internal static IEnumerable<VideoInfo> Defaults = new List<VideoInfo>
