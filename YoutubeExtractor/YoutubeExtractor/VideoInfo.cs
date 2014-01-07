@@ -107,6 +107,8 @@ namespace YoutubeExtractor
             }
         }
 
+		public string VideoUrl {get;set;}
+
         /// <summary>
         /// Gets the audio type (encoding).
         /// </summary>

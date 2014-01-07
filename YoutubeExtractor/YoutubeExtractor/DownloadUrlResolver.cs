@@ -51,7 +51,7 @@ namespace YoutubeExtractor
 
                 IEnumerable<Uri> downloadUrls = ExtractDownloadUrls(json);
 
-                return GetVideoInfos(downloadUrls, videoTitle);
+				return GetVideoInfos(downloadUrls, videoTitle,videoUrl);
             }
 
             catch (Exception ex)
@@ -156,7 +156,7 @@ namespace YoutubeExtractor
             return streamMapString;
         }
 
-        private static IEnumerable<VideoInfo> GetVideoInfos(IEnumerable<Uri> downloadUrls, string videoTitle)
+		private static IEnumerable<VideoInfo> GetVideoInfos(IEnumerable<Uri> downloadUrls, string videoTitle,string videoUrl)
         {
             var downLoadInfos = new List<VideoInfo>();
 
@@ -173,13 +173,16 @@ namespace YoutubeExtractor
                     info = new VideoInfo(info)
                     {
                         DownloadUrl = url.ToString(),
-                        Title = videoTitle
+						Title = videoTitle,
+						VideoUrl = videoUrl,
                     };
                 }
 
                 else
                 {
-                    info = new VideoInfo(formatCode);
+					info = new VideoInfo(formatCode){
+						VideoUrl = videoUrl,
+					};
                 }
 
                 downLoadInfos.Add(info);
