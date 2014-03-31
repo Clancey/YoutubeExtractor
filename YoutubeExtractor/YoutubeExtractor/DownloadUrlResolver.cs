@@ -50,7 +50,6 @@ namespace YoutubeExtractor
                 string videoTitle = GetVideoTitle(json);
 
                 IEnumerable<Uri> downloadUrls = ExtractDownloadUrls(json);
-
 				return GetVideoInfos(downloadUrls, videoTitle,videoUrl);
             }
 
