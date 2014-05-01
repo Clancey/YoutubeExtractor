@@ -1,10 +1,10 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Newtonsoft.Json.Linq;
 
 namespace YoutubeExtractor
 {
@@ -14,11 +14,51 @@ namespace YoutubeExtractor
     public static class DownloadUrlResolver
     {
         private const int CorrectSignatureLength = 81;
+        private const string SignatureQuery = "signature";
+
+        /// <summary>
+        /// Decrypts the signature in the <see cref="VideoInfo.DownloadUrl" /> property and sets it
+        /// to the decrypted URL. Use this method, if you have decryptSignature in the <see
+        /// cref="GetDownloadUrls" /> method set to false.
+        /// </summary>
+        /// <param name="videoInfo">The video info which's downlaod URL should be decrypted.</param>
+        /// <exception cref="YoutubeParseException">
+        /// There was an error while deciphering the signature.
+        /// </exception>
+        public static void DecryptDownloadUrl(VideoInfo videoInfo)
+        {
+            IDictionary<string, string> queries = HttpHelper.ParseQueryString(videoInfo.DownloadUrl);
+
+            if (queries.ContainsKey(SignatureQuery))
+            {
+                string encryptedSignature = queries[SignatureQuery];
+
+                string decrypted;
+
+                try
+                {
+                    decrypted = GetDecipheredSignature(videoInfo.HtmlPlayerVersion, encryptedSignature);
+                }
+
+                catch (Exception ex)
+                {
+                    throw new YoutubeParseException("Could not decipher signature", ex);
+                }
+
+                videoInfo.DownloadUrl = HttpHelper.ReplaceQueryStringParameter(videoInfo.DownloadUrl, SignatureQuery, decrypted);
+            }
+        }
 
         /// <summary>
         /// Gets a list of <see cref="VideoInfo" />s for the specified URL.
         /// </summary>
         /// <param name="videoUrl">The URL of the YouTube video.</param>
+        /// <param name="decryptSignature">
+        /// A value indicating whether the video signatures should be decrypted or not. Decrypting
+        /// consists of a HTTP request for each <see cref="VideoInfo" />, so you may want to set
+        /// this to false and call <see cref="DecryptDownloadUrl" /> on your selected <see
+        /// cref="VideoInfo" /> later.
+        /// </param>
         /// <returns>A list of <see cref="VideoInfo" />s that can be used to download the video.</returns>
         /// <exception cref="ArgumentNullException">
         /// The <paramref name="videoUrl" /> parameter is <c>null</c>.
@@ -32,11 +72,12 @@ namespace YoutubeExtractor
         /// </exception>
         /// <exception cref="YoutubeParseException">The Youtube page could not be parsed.</exception>
 		/// 
-		public static Task<IEnumerable<VideoInfo>> GetDownloadUrlsAsync(string videoUrl)
+		public static Task<IEnumerable<VideoInfo>> GetDownloadUrlsAsync(string videoUrl, bool decryptSignature = true)
 		{
-			return Task.Factory.StartNew (() => GetDownloadUrls (videoUrl));
+			return Task.Factory.StartNew (() => GetDownloadUrls (videoUrl,decryptSignature));
 		}
-        public static IEnumerable<VideoInfo> GetDownloadUrls(string videoUrl)
+
+        public static IEnumerable<VideoInfo> GetDownloadUrls(string videoUrl, bool decryptSignature = true)
         {
             if (videoUrl == null)
                 throw new ArgumentNullException("videoUrl");
@@ -49,8 +90,23 @@ namespace YoutubeExtractor
 
                 string videoTitle = GetVideoTitle(json);
 
-                IEnumerable<Uri> downloadUrls = ExtractDownloadUrls(json);
-				return GetVideoInfos(downloadUrls, videoTitle,videoUrl);
+				IEnumerable<Uri> downloadUrls = ExtractDownloadUrls(json);
+
+				IEnumerable<VideoInfo> infos = GetVideoInfos(downloadUrls, videoTitle,videoUrl).ToList();
+
+                string htmlPlayerVersion = GetHtml5PlayerVersion(json);
+
+                foreach (VideoInfo info in infos)
+                {
+                    info.HtmlPlayerVersion = htmlPlayerVersion;
+
+                    if (decryptSignature)
+                    {
+                        DecryptDownloadUrl(info);
+                    }
+                }
+
+                return infos;
             }
 
             catch (Exception ex)
@@ -64,18 +120,6 @@ namespace YoutubeExtractor
             }
 
             return null; // Will never happen, but the compiler requires it
-        }
-
-        /// <summary>
-        /// Overrides the hardcoded ciphers. This way you can retrieve updated ones from your
-        /// webservice or another source, without having to update the YoutubeExtractor dll.
-        /// </summary>
-        /// <param name="ciphers">
-        /// A collection of string keys and values that describe the decipher process.
-        /// </param>
-        public static void OverrideCiphers(IEnumerable<KeyValuePair<string, string>> ciphers)
-        {
-            Decipherer.Ciphers = ciphers.ToDictionary(x => x.Key, x => x.Value);
         }
 
         private static IEnumerable<Uri> ExtractDownloadUrls(JObject json)
@@ -93,10 +137,7 @@ namespace YoutubeExtractor
                 {
                     string signature = queries.ContainsKey("s") ? queries["s"] : queries["sig"];
 
-                    string htmlPlayerVersion = GetHtml5PlayerVersion(json);
-                    signature = GetDecipheredSignature(htmlPlayerVersion, signature);
-
-                    url = string.Format("{0}&signature={1}", queries["url"], signature);
+                    url = string.Format("{0}&{1}={2}", queries["url"], SignatureQuery, signature);
 
                     string fallbackHost = queries.ContainsKey("fallback_host") ? "&fallback_host=" + queries["fallback_host"] : String.Empty;
 
@@ -179,9 +220,11 @@ namespace YoutubeExtractor
 
                 else
                 {
-					info = new VideoInfo(formatCode){
+                    info = new VideoInfo(formatCode)
+                    {
+						DownloadUrl = url.ToString(),
 						VideoUrl = videoUrl,
-					};
+                    };
                 }
 
                 downLoadInfos.Add(info);
@@ -220,9 +263,9 @@ namespace YoutubeExtractor
 
 #if PORTABLE
 
-        public static async System.Threading.Tasks.Task<IEnumerable<VideoInfo>> GetDownloadUrlsAsync(string videoUrl)
+        public static async System.Threading.Tasks.Task<IEnumerable<VideoInfo>> GetDownloadUrlsAsync(string videoUrl, bool decryptSignature = true)
         {
-            return await System.Threading.Tasks.Task.Run(() => GetDownloadUrls(videoUrl));
+            return await System.Threading.Tasks.Task.Run(() => GetDownloadUrls(videoUrl, decryptSignature));
         }
 
 #endif
