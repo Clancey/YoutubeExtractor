@@ -1,5 +1,9 @@
 # YoutubeExtractor
 
+<a href="https://www.paypal.com/cgi-bin/webscr?cmd=_donations&business=daume%2edennis%40gmail%2ecom&lc=US&item_name=YoutubeExtractor&no_note=0&currency_code=USD&bn=PP%2dDonationsBF%3abtn_donate_LG%2egif%3aNonHostedGuest">
+  <img src="https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif" title="Donate via Paypal" />
+</a>
+
 <a href="http://flattr.com/thing/1093085/" target="_blank">
 <img src="http://api.flattr.com/button/flattr-badge-large.png" alt="Flattr this" title="Flattr this" border="0" />
 </a>
@@ -63,6 +67,14 @@ IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(link);
  */
 VideoInfo video = videoInfos
     .First(info => info.VideoType == VideoType.Mp4 && info.Resolution == 360);
+    
+/*
+ * If the video has a decrypted signature, decipher it
+ */
+if (video.RequiresDecryption)
+{
+    DownloadUrlResolver.DecryptDownloadUrl(video);
+}
 
 /*
  * Create the video downloader.
@@ -93,6 +105,14 @@ VideoInfo video = videoInfos
     .Where(info => info.CanExtractAudio)
     .OrderByDescending(info => info.AudioBitrate)
     .First();
+    
+/*
+ * If the video has a decrypted signature, decipher it
+ */
+if (video.RequiresDecryption)
+{
+    DownloadUrlResolver.DecryptDownloadUrl(video);
+}
 
 /*
  * Create the audio downloader.

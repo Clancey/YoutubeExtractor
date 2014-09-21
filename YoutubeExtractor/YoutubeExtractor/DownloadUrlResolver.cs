@@ -46,6 +46,7 @@ namespace YoutubeExtractor
                 }
 
                 videoInfo.DownloadUrl = HttpHelper.ReplaceQueryStringParameter(videoInfo.DownloadUrl, SignatureQuery, decrypted);
+                videoInfo.RequiresDecryption = false;
             }
         }
 
@@ -82,7 +83,12 @@ namespace YoutubeExtractor
             if (videoUrl == null)
                 throw new ArgumentNullException("videoUrl");
 
-            videoUrl = NormalizeYoutubeUrl(videoUrl);
+            bool isYoutubeUrl = TryNormalizeYoutubeUrl(videoUrl, out videoUrl);
+
+            if (!isYoutubeUrl)
+            {
+                throw new ArgumentException("URL is not a valid youtube URL!");
+            }
 
             try
             {
@@ -90,7 +96,7 @@ namespace YoutubeExtractor
 
                 string videoTitle = GetVideoTitle(json);
 
-				IEnumerable<Uri> downloadUrls = ExtractDownloadUrls(json);
+                IEnumerable<ExtractionInfo> downloadUrls = ExtractDownloadUrls(json);
 
 				IEnumerable<VideoInfo> infos = GetVideoInfos(downloadUrls, videoTitle,videoUrl).ToList();
 
@@ -100,7 +106,7 @@ namespace YoutubeExtractor
                 {
                     info.HtmlPlayerVersion = htmlPlayerVersion;
 
-                    if (decryptSignature)
+                    if (decryptSignature && info.RequiresDecryption)
                     {
                         DecryptDownloadUrl(info);
                     }
@@ -116,13 +122,61 @@ namespace YoutubeExtractor
                     throw;
                 }
 
-                ThrowYoutubeParseException(ex);
+                ThrowYoutubeParseException(ex, videoUrl);
             }
 
             return null; // Will never happen, but the compiler requires it
         }
 
-        private static IEnumerable<Uri> ExtractDownloadUrls(JObject json)
+#if PORTABLE
+
+        public static System.Threading.Tasks.Task<IEnumerable<VideoInfo>> GetDownloadUrlsAsync(string videoUrl, bool decryptSignature = true)
+        {
+            return System.Threading.Tasks.Task.Run(() => GetDownloadUrls(videoUrl, decryptSignature));
+        }
+
+#endif
+
+        /// <summary>
+        /// Normalizes the given YouTube URL to the format http://youtube.com/watch?v={youtube-id}
+        /// and returns whether the normalization was successful or not.
+        /// </summary>
+        /// <param name="url">The YouTube URL to normalize.</param>
+        /// <param name="normalizedUrl">The normalized YouTube URL.</param>
+        /// <returns>
+        /// <c>true</c>, if the normalization was successful; <c>false</c>, if the URL is invalid.
+        /// </returns>
+        public static bool TryNormalizeYoutubeUrl(string url, out string normalizedUrl)
+        {
+            url = url.Trim();
+
+            url = url.Replace("youtu.be/", "youtube.com/watch?v=");
+            url = url.Replace("www.youtube", "youtube");
+            url = url.Replace("youtube.com/embed/", "youtube.com/watch?v=");
+
+            if (url.Contains("/v/"))
+            {
+                url = "http://youtube.com" + new Uri(url).AbsolutePath.Replace("/v/", "/watch?v=");
+            }
+
+            url = url.Replace("/watch#", "/watch?");
+
+            IDictionary<string, string> query = HttpHelper.ParseQueryString(url);
+
+            string v;
+
+            if (!query.TryGetValue("v", out v))
+            {
+                normalizedUrl = null;
+                return false;
+            }
+
+            normalizedUrl = "http://youtube.com/watch?v=" + v;
+
+            return true;
+        }
+
+        private static IEnumerable<ExtractionInfo> ExtractDownloadUrls(JObject json)
         {
             string[] splitByUrls = GetStreamMap(json).Split(',');
             string[] adaptiveFmtSplitByUrls = GetAdaptiveStreamMap(json).Split(',');
@@ -133,8 +187,11 @@ namespace YoutubeExtractor
                 IDictionary<string, string> queries = HttpHelper.ParseQueryString(s);
                 string url;
 
+                bool requiresDecryption = false;
+
                 if (queries.ContainsKey("s") || queries.ContainsKey("sig"))
                 {
+                    requiresDecryption = queries.ContainsKey("s");
                     string signature = queries.ContainsKey("s") ? queries["s"] : queries["sig"];
 
                     url = string.Format("{0}&{1}={2}", queries["url"], SignatureQuery, signature);
@@ -152,7 +209,7 @@ namespace YoutubeExtractor
                 url = HttpHelper.UrlDecode(url);
                 url = HttpHelper.UrlDecode(url);
 
-                yield return new Uri(url);
+                yield return new ExtractionInfo { RequiresDecryption = requiresDecryption, Uri = new Uri(url) };
             }
         }
 
@@ -190,19 +247,19 @@ namespace YoutubeExtractor
 
             if (streamMapString == null || streamMapString.Contains("been+removed"))
             {
-                throw new VideoNotAvailableException("Video is removed");
+                throw new VideoNotAvailableException("Video is removed or has an age restriction.");
             }
 
             return streamMapString;
         }
 
-		private static IEnumerable<VideoInfo> GetVideoInfos(IEnumerable<Uri> downloadUrls, string videoTitle,string videoUrl)
+        private static IEnumerable<VideoInfo> GetVideoInfos(IEnumerable<ExtractionInfo> extractionInfos, string videoTitle)
         {
             var downLoadInfos = new List<VideoInfo>();
 
-            foreach (Uri url in downloadUrls)
+            foreach (ExtractionInfo extractionInfo in extractionInfos)
             {
-                string itag = HttpHelper.ParseQueryString(url.Query)["itag"];
+                string itag = HttpHelper.ParseQueryString(extractionInfo.Uri.Query)["itag"];
 
                 int formatCode = int.Parse(itag);
 
@@ -212,9 +269,10 @@ namespace YoutubeExtractor
                 {
                     info = new VideoInfo(info)
                     {
-                        DownloadUrl = url.ToString(),
+                        DownloadUrl = extractionInfo.Uri.ToString(),
 						Title = videoTitle,
 						VideoUrl = videoUrl,
+                        RequiresDecryption = extractionInfo.RequiresDecryption
                     };
                 }
 
@@ -235,7 +293,9 @@ namespace YoutubeExtractor
 
         private static string GetVideoTitle(JObject json)
         {
-            return json["args"]["title"].ToString();
+            JToken title = json["args"]["title"];
+
+            return title == null ? String.Empty : title.ToString();
         }
 
         private static bool IsVideoUnavailable(string pageSource)
@@ -261,47 +321,18 @@ namespace YoutubeExtractor
             return JObject.Parse(extractedJson);
         }
 
-#if PORTABLE
-
-        public static async System.Threading.Tasks.Task<IEnumerable<VideoInfo>> GetDownloadUrlsAsync(string videoUrl, bool decryptSignature = true)
+        private static void ThrowYoutubeParseException(Exception innerException, string videoUrl)
         {
-            return await System.Threading.Tasks.Task.Run(() => GetDownloadUrls(videoUrl, decryptSignature));
-        }
-
-#endif
-
-        private static string NormalizeYoutubeUrl(string url)
-        {
-            url = url.Trim();
-
-            url = url.Replace("youtu.be/", "youtube.com/watch?v=");
-            url = url.Replace("www.youtube", "youtube");
-            url = url.Replace("youtube.com/embed/", "youtube.com/watch?v=");
-
-            if (url.Contains("/v/"))
-            {
-                url = "http://youtube.com" + new Uri(url).AbsolutePath.Replace("/v/", "/watch?v=");
-            }
-
-            url = url.Replace("/watch#", "/watch?");
-
-            IDictionary<string, string> query = HttpHelper.ParseQueryString(url);
-
-            string v;
-
-            if (!query.TryGetValue("v", out v))
-            {
-                throw new ArgumentException("URL is not a valid youtube URL!");
-            }
-
-            return "http://youtube.com/watch?v=" + v;
-        }
-
-        private static void ThrowYoutubeParseException(Exception innerException)
-        {
-            throw new YoutubeParseException("Could not parse the Youtube page.\n" +
+            throw new YoutubeParseException("Could not parse the Youtube page for URL " + videoUrl + "\n" +
                                             "This may be due to a change of the Youtube page structure.\n" +
                                             "Please report this bug at www.github.com/flagbug/YoutubeExtractor/issues", innerException);
+        }
+
+        private class ExtractionInfo
+        {
+            public bool RequiresDecryption { get; set; }
+
+            public Uri Uri { get; set; }
         }
     }
 }

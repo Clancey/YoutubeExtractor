@@ -1,3 +1,32 @@
+# v0.10.4
+
+- Performance improvements in the deciphering code.
+
+# v0.10.3
+
+## Bugfixes
+- Fixed the deciphering code. Thanks @Cyano!
+
+# v0.10.2
+
+- Added some missing format codes.
+- Added a Windows Phone 8.1 target.
+
+# v0.10.1
+
+## Bugfixes
+- Fixed an issue with the signature deciphering.
+
+# v0.10.0
+
+## Features
+- Added a new method "TryNormalizeYoutubeUrl" that normalizes the given YouTube URL 
+  to the format http://youtube.com/watch?v={youtube-id} and returns whether the 
+  normalization was successful or not.
+  
+## Bugfixes
+- Fixed an exception from occurring if the video title couldn't be parsed.
+
 # v0.9.5
 
 ## Bugfixes

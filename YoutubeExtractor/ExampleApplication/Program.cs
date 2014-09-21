@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using YoutubeExtractor;
 
 namespace ExampleApplication
@@ -19,13 +20,22 @@ namespace ExampleApplication
                 .First();
 
             /*
+             * If the video has a decrypted signature, decipher it
+             */
+            if (video.RequiresDecryption)
+            {
+                DownloadUrlResolver.DecryptDownloadUrl(video);
+            }
+
+            /*
              * Create the audio downloader.
              * The first argument is the video where the audio should be extracted from.
              * The second argument is the path to save the audio file.
              */
 
             var audioDownloader = new AudioDownloader(video,
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), video.Title + video.AudioExtension));
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                RemoveIllegalPathCharacters(video.Title) + video.AudioExtension));
 
             // Register the progress events. We treat the download progress as 85% of the progress
             // and the extraction progress only as 15% of the progress, because the download will
@@ -49,12 +59,21 @@ namespace ExampleApplication
                 .First(info => info.VideoType == VideoType.Mp4 && info.Resolution == 360);
 
             /*
+             * If the video has a decrypted signature, decipher it
+             */
+            if (video.RequiresDecryption)
+            {
+                DownloadUrlResolver.DecryptDownloadUrl(video);
+            }
+
+            /*
              * Create the video downloader.
              * The first argument is the video to download.
              * The second argument is the path to save the video file.
              */
             var videoDownloader = new VideoDownloader(video,
-                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), video.Title + video.VideoExtension));
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
+                RemoveIllegalPathCharacters(video.Title) + video.VideoExtension));
 
             // Register the ProgressChanged event and print the current progress
             videoDownloader.DownloadProgressChanged += (sender, args) => Console.WriteLine(args.ProgressPercentage);
@@ -75,10 +94,17 @@ namespace ExampleApplication
              * Get the available video formats.
              * We'll work with them in the video and audio download examples.
              */
-            IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(link);
+            IEnumerable<VideoInfo> videoInfos = DownloadUrlResolver.GetDownloadUrls(link, false);
 
             //DownloadAudio(videoInfos);
             DownloadVideo(videoInfos);
+        }
+
+        private static string RemoveIllegalPathCharacters(string path)
+        {
+            string regexSearch = new string(Path.GetInvalidFileNameChars()) + new string(Path.GetInvalidPathChars());
+            var r = new Regex(string.Format("[{0}]", Regex.Escape(regexSearch)));
+            return r.Replace(path, "");
         }
     }
 }
