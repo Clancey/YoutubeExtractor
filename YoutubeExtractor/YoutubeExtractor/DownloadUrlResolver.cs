@@ -253,7 +253,7 @@ namespace YoutubeExtractor
             return streamMapString;
         }
 
-        private static IEnumerable<VideoInfo> GetVideoInfos(IEnumerable<ExtractionInfo> extractionInfos, string videoTitle)
+		private static IEnumerable<VideoInfo> GetVideoInfos(IEnumerable<ExtractionInfo> extractionInfos, string videoTitle,string videoUrl)
         {
             var downLoadInfos = new List<VideoInfo>();
 
@@ -280,7 +280,7 @@ namespace YoutubeExtractor
                 {
                     info = new VideoInfo(formatCode)
                     {
-						DownloadUrl = url.ToString(),
+						DownloadUrl = extractionInfo.Uri.ToString(),
 						VideoUrl = videoUrl,
                     };
                 }
