@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>{B16EE623-442E-4D56-B6CC-3DC49FA49401}</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>YoutubeExtractor</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)AacAudioExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)AdaptiveType.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)AudioDownloader.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)AudioExtractionException.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)AudioType.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BigEndianBitConverter.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)BitHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Decipherer.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)DownloadUrlResolver.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Downloader.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)FlvFile.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)HttpHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)IAudioExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Mp3AudioExtractor.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)ProgressEventArgs.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)VideoDownloader.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)VideoInfo.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)VideoNotAvailableException.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)VideoType.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)YoutubeParseException.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)packages.YoutubeExtractor.config" />
+  </ItemGroup>
+</Project>
