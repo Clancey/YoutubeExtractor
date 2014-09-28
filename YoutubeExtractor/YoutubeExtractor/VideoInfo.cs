@@ -56,7 +56,10 @@ namespace YoutubeExtractor
             new VideoInfo(171, VideoType.WebM, 0, false, AudioType.Vorbis, 128, AdaptiveType.Audio),
             new VideoInfo(172, VideoType.WebM, 0, false, AudioType.Vorbis, 192, AdaptiveType.Audio)
         };
+		public VideoInfo()
+		{
 
+		}
         internal VideoInfo(int formatCode)
             : this(formatCode, VideoType.Unknown, 0, false, AudioType.Unknown, 0, AdaptiveType.None)
         { }
