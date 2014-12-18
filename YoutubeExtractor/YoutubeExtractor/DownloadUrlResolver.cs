@@ -222,10 +222,6 @@ namespace YoutubeExtractor
 
         private static string GetDecipheredSignature(string htmlPlayerVersion, string signature)
         {
-            if (signature.Length == CorrectSignatureLength)
-            {
-                return signature;
-            }
 
             return Decipherer.DecipherWithVersion(signature, htmlPlayerVersion);
         }
