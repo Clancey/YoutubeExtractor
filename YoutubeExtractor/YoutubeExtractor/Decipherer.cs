@@ -19,9 +19,15 @@ namespace YoutubeExtractor
 				return true;
 			}
 			catch(Exception ex) {
-				Console.WriteLine ("Error caching cipher key: {0}", ex.Message);
+				Console.WriteLine ("Error caching cipher key: {0}", ex.GetFullErrorMessage());
 			}
 			return false;
+		}
+		static string GetFullErrorMessage(this Exception ex)
+		{
+			if (ex.InnerException != null)
+				return ex.InnerException.GetFullErrorMessage ();
+			return ex.Message;
 		}
         public static string DecipherWithVersion(string cipher, string cipherVersion)
 		{

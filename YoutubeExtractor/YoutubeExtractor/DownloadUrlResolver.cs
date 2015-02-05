@@ -122,7 +122,7 @@ namespace YoutubeExtractor
                     throw;
                 }
 
-                ThrowYoutubeParseException(ex, videoUrl);
+                //ThrowYoutubeParseException(ex, videoUrl);
             }
 
             return null; // Will never happen, but the compiler requires it
@@ -148,32 +148,44 @@ namespace YoutubeExtractor
         /// </returns>
         public static bool TryNormalizeYoutubeUrl(string url, out string normalizedUrl)
         {
-            url = url.Trim();
+			try{
+	            url = url.Trim();
 
-            url = url.Replace("youtu.be/", "youtube.com/watch?v=");
-            url = url.Replace("www.youtube", "youtube");
-            url = url.Replace("youtube.com/embed/", "youtube.com/watch?v=");
+	            url = url.Replace("youtu.be/", "youtube.com/watch?v=");
+	            url = url.Replace("www.youtube", "youtube");
+	            url = url.Replace("youtube.com/embed/", "youtube.com/watch?v=");
 
-            if (url.Contains("/v/"))
-            {
-                url = "http://youtube.com" + new Uri(url).AbsolutePath.Replace("/v/", "/watch?v=");
-            }
+	            if (url.Contains("/v/"))
+	            {
+	                url = "http://youtube.com" + new Uri(url).AbsolutePath.Replace("/v/", "/watch?v=");
+	            }
 
-            url = url.Replace("/watch#", "/watch?");
+	            url = url.Replace("/watch#", "/watch?");
+				var uri = new Uri (url);
 
-            IDictionary<string, string> query = HttpHelper.ParseQueryString(url);
 
-            string v;
+				if (uri.Host.IndexOf("youtube", StringComparison.InvariantCultureIgnoreCase)  == -1 ) {
+					normalizedUrl = string.Empty;
+					return false;
+				}
+	            IDictionary<string, string> query = HttpHelper.ParseQueryString(url);
 
-            if (!query.TryGetValue("v", out v))
-            {
-                normalizedUrl = null;
-                return false;
-            }
+	            string v;
 
-            normalizedUrl = "http://youtube.com/watch?v=" + v;
+	            if (!query.TryGetValue("v", out v))
+	            {
+	                normalizedUrl = null;
+	                return false;
+	            }
 
-            return true;
+	            normalizedUrl = "http://youtube.com/watch?v=" + v;
+
+	            return true;
+			}
+			catch(Exception ex) {
+				normalizedUrl = string.Empty;
+			}
+			return false;
         }
 
         private static IEnumerable<ExtractionInfo> ExtractDownloadUrls(JObject json)
