@@ -22,17 +22,15 @@ namespace YoutubeExtractor
 
             return task.ContinueWith(t => ReadStreamFromResponse(t.Result)).Result;
 #else
-			#if FREEMUSIC && !ADDON
 			using (var client = new System.Net.Http.HttpClient(new ModernHttpClient.NativeMessageHandler()))
 			{
 				return client.GetStringAsync(new Uri(url)).Result;
 			}
-			#endif
-            using (var client = new WebClient())
-            {
-                client.Encoding = System.Text.Encoding.UTF8;
-                return client.DownloadString(url);
-            }
+//            using (var client = new WebClient())
+//            {
+//                client.Encoding = System.Text.Encoding.UTF8;
+//                return client.DownloadString(url);
+//            }
 #endif
         }
 
