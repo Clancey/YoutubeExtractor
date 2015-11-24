@@ -11,7 +11,7 @@ namespace YoutubeExtractor
 		static Dictionary<string, string> Cache = new Dictionary<string, string>();
 		public static bool PreCache()
 		{
-			const string version = "en_US-vflkHheES/html5player";
+			const string version = "en_US-vflUpjAy9/base";
 			if (Cache.ContainsKey(version))
 				return true;
 			try
