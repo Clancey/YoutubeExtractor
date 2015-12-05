@@ -158,7 +158,7 @@ namespace YoutubeExtractor
 
 	            if (url.Contains("/v/"))
 	            {
-	                url = "http://youtube.com" + new Uri(url).AbsolutePath.Replace("/v/", "/watch?v=");
+	                url = "https://youtube.com" + new Uri(url).AbsolutePath.Replace("/v/", "/watch?v=");
 	            }
 
 	            url = url.Replace("/watch#", "/watch?");
@@ -179,7 +179,7 @@ namespace YoutubeExtractor
 	                return false;
 	            }
 
-	            normalizedUrl = "http://youtube.com/watch?v=" + v;
+	            normalizedUrl = "https://youtube.com/watch?v=" + v;
 
 	            return true;
 			}
