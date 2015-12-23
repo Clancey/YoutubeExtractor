@@ -38,7 +38,6 @@ namespace YoutubeExtractor
 		}
 		private static string GetCipherString(string cipherVersion)
 		{
-			string operations = "";
 			string jsUrl = string.Format("http://s.ytimg.com/yts/jsbin/player-{0}.js", cipherVersion);
 			if (!Cache.ContainsKey(cipherVersion))
 			{
