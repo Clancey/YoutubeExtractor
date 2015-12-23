@@ -40,81 +40,84 @@ namespace YoutubeExtractor
 		{
 			string operations = "";
 			string jsUrl = string.Format("http://s.ytimg.com/yts/jsbin/player-{0}.js", cipherVersion);
-			if (!Cache.ContainsKey(cipherVersion)){
-	            string js = HttpHelper.DownloadString(jsUrl);
+			if (!Cache.ContainsKey(cipherVersion))
+			{
+				string js = HttpHelper.DownloadString(jsUrl);
 
-	            //Find "C" in this: var A = B.sig||C (B.s)
-	            string functNamePattern = @"\.sig\s*\|\|([a-zA-Z0-9\$]+)\("; //Regex Formed To Find Word or DollarSign
+				//Find "C" in this: var A = B.sig||C (B.s)
+				string functNamePattern = @"\.sig\s*\|\|([a-zA-Z0-9\$]+)\("; //Regex Formed To Find Word or DollarSign
 
-	            var funcName = Regex.Match(js, functNamePattern).Groups[1].Value;
-	            
-	            if (funcName.Contains("$")) 
-	            {
-	                funcName = "\\" + funcName; //Due To Dollar Sign Introduction, Need To Escape
-	            }
+				var funcName = Regex.Match(js, functNamePattern).Groups[1].Value;
 
-	            string funcPattern = @"var " + @funcName + @"=function\(\w+\)\{.*?\};"; //Escape funcName string
-	            var funcBody = Regex.Match(js, funcPattern).Value; //Entire sig function
-	            var lines = funcBody.Split(';'); //Each line in sig function
+				if (funcName.Contains("$"))
+				{
+					funcName = "\\" + funcName; //Due To Dollar Sign Introduction, Need To Escape
+				}
 
-	            string idReverse = "", idSlice = "", idCharSwap = ""; //Hold name for each cipher method
-	            string functionIdentifier = "";
+				string funcPattern = @funcName + @"=function\(\w+\)\{.*?\},"; //Escape funcName string
+				var funcBody = Regex.Match(js, funcPattern, RegexOptions.Singleline).Value; //Entire sig function
+				var lines = funcBody.Split(';'); //Each line in sig function
 
-	            foreach (var line in lines.Skip(1).Take(lines.Length - 2)) //Matches the funcBody with each cipher method. Only runs till all three are defined.
-	            {
-	                if (!string.IsNullOrEmpty(idReverse) && !string.IsNullOrEmpty(idSlice) &&
-	                    !string.IsNullOrEmpty(idCharSwap))
-	                {
-	                    break; //Break loop if all three cipher methods are defined
-	                }
+				string idReverse = "", idSlice = "", idCharSwap = ""; //Hold name for each cipher method
+				string functionIdentifier = "";
+				string operations = "";
 
-	                functionIdentifier = GetFunctionFromLine(line);
-	                string reReverse = string.Format(@"{0}:\bfunction\b\(\w+\)", functionIdentifier); //Regex for reverse (one parameter)
-	                string reSlice = string.Format(@"{0}:\bfunction\b\([a],b\).(\breturn\b)?.?\w+\.", functionIdentifier); //Regex for slice (return or not)
-	                string reSwap = string.Format(@"{0}:\bfunction\b\(\w+\,\w\).\bvar\b.\bc=a\b", functionIdentifier); //Regex for the char swap.
+				foreach (var line in lines.Skip(1).Take(lines.Length - 2)) //Matches the funcBody with each cipher method. Only runs till all three are defined.
+				{
+					if (!string.IsNullOrEmpty(idReverse) && !string.IsNullOrEmpty(idSlice) &&
+					!string.IsNullOrEmpty(idCharSwap))
+					{
+						break; //Break loop if all three cipher methods are defined
+					}
 
-	                if (Regex.Match(js, reReverse).Success)
-	                {
-	                    idReverse = functionIdentifier; //If def matched the regex for reverse then the current function is a defined as the reverse
-	                }
+					functionIdentifier = GetFunctionFromLine(line);
+					string reReverse = string.Format(@"{0}:\bfunction\b\(\w+\)", functionIdentifier); //Regex for reverse (one parameter)
+					string reSlice = string.Format(@"{0}:\bfunction\b\([a],b\).(\breturn\b)?.?\w+\.", functionIdentifier); //Regex for slice (return or not)
+					string reSwap = string.Format(@"{0}:\bfunction\b\(\w+\,\w\).\bvar\b.\bc=a\b", functionIdentifier); //Regex for the char swap.
 
-	                if (Regex.Match(js, reSlice).Success)
-	                {
-	                    idSlice = functionIdentifier; //If def matched the regex for slice then the current function is defined as the slice.
-	                }
+					if (Regex.Match(js, reReverse).Success)
+					{
+						idReverse = functionIdentifier; //If def matched the regex for reverse then the current function is a defined as the reverse
+					}
 
-	                if (Regex.Match(js, reSwap).Success)
-	                {
-	                    idCharSwap = functionIdentifier; //If def matched the regex for charSwap then the current function is defined as swap.
-	                }
-	            }
+					if (Regex.Match(js, reSlice).Success)
+					{
+						idSlice = functionIdentifier; //If def matched the regex for slice then the current function is defined as the slice.
+					}
 
-	            foreach (var line in lines.Skip(1).Take(lines.Length - 2))
-	            {
-	                Match m;
-	                functionIdentifier = GetFunctionFromLine(line);
+					if (Regex.Match(js, reSwap).Success)
+					{
+						idCharSwap = functionIdentifier; //If def matched the regex for charSwap then the current function is defined as swap.
+					}
+				}
 
-	                if ((m = Regex.Match(line, @"\(\w+,(?<index>\d+)\)")).Success && functionIdentifier == idCharSwap)
-	                {
-	                    operations += "w" + m.Groups["index"].Value + " "; //operation is a swap (w)
-	                }
+				foreach (var line in lines.Skip(1).Take(lines.Length - 2))
+				{
+					Match m;
+					functionIdentifier = GetFunctionFromLine(line);
 
-	                if ((m = Regex.Match(line, @"\(\w+,(?<index>\d+)\)")).Success && functionIdentifier == idSlice)
-	                {
-	                    operations += "s" + m.Groups["index"].Value + " "; //operation is a slice
-	                }
+					if ((m = Regex.Match(line, @"\(\w+,(?<index>\d+)\)")).Success && functionIdentifier == idCharSwap)
+					{
+						operations += "w" + m.Groups["index"].Value + " "; //operation is a swap (w)
+					}
 
-	                if (functionIdentifier == idReverse) //No regex required for reverse (reverse method has no parameters)
-	                {
-	                    operations += "r "; //operation is a reverse
-	                }
-	            }
+					if ((m = Regex.Match(line, @"\(\w+,(?<index>\d+)\)")).Success && functionIdentifier == idSlice)
+					{
+						operations += "s" + m.Groups["index"].Value + " "; //operation is a slice
+					}
 
-				Cache[cipherVersion] = operations.Trim();
+					if (functionIdentifier == idReverse) //No regex required for reverse (reverse method has no parameters)
+					{
+						operations += "r "; //operation is a reverse
+					}
+				}
+
+				operations = operations.Trim();
+
+				Cache[cipherVersion] = DecipherWithOperations(cipher, operations);
 			}
-
-
 			return Cache[cipherVersion];
+    
         }
 
         private static string ApplyOperation(string cipher, string op)
