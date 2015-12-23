@@ -111,9 +111,7 @@ namespace YoutubeExtractor
 					}
 				}
 
-				operations = operations.Trim();
-
-				Cache[cipherVersion] = DecipherWithOperations(cipher, operations);
+				Cache[cipherVersion] =  operations.Trim();
 			}
 			return Cache[cipherVersion];
     
