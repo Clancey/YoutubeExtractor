@@ -22,7 +22,7 @@ namespace YoutubeExtractor
 
             return task.ContinueWith(t => ReadStreamFromResponse(t.Result)).Result;
 #else
-			using (var client = new System.Net.Http.HttpClient(new ModernHttpClient.NativeMessageHandler()))
+			using (var client = new System.Net.Http.HttpClient())
 			{
 				return client.GetStringAsync(new Uri(url)).Result;
 			}
